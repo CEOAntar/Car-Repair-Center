@@ -1,0 +1,10 @@
+D:\Asynex\Car-Repair-Center\src\CarRepairCenter.Core\bin\Debug\net9.0\CarRepairCenter.Core.deps.json
+D:\Asynex\Car-Repair-Center\src\CarRepairCenter.Core\bin\Debug\net9.0\CarRepairCenter.Core.pdb
+D:\Asynex\Car-Repair-Center\src\CarRepairCenter.Core\obj\Debug\net9.0\CarRepairCenter.Core.GeneratedMSBuildEditorConfig.editorconfig
+D:\Asynex\Car-Repair-Center\src\CarRepairCenter.Core\obj\Debug\net9.0\CarRepairCenter.Core.AssemblyInfoInputs.cache
+D:\Asynex\Car-Repair-Center\src\CarRepairCenter.Core\obj\Debug\net9.0\CarRepairCenter.Core.AssemblyInfo.cs
+D:\Asynex\Car-Repair-Center\src\CarRepairCenter.Core\obj\Debug\net9.0\CarRepairCenter.Core.csproj.CoreCompileInputs.cache
+D:\Asynex\Car-Repair-Center\src\CarRepairCenter.Core\obj\Debug\net9.0\CarRepairCenter.Core.sourcelink.json
+D:\Asynex\Car-Repair-Center\src\CarRepairCenter.Core\obj\Debug\net9.0\CarRepairCenter.Core.dll
+D:\Asynex\Car-Repair-Center\src\CarRepairCenter.Core\obj\Debug\net9.0\refint\CarRepairCenter.Core.dll
+D:\Asynex\Car-Repair-Center\src\CarRepairCenter.Core\obj\Debug\net9.0\CarRepairCenter.Core.pdb

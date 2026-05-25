@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Search, Eye, X, Plus } from 'lucide-react';
 import api from '../../services/api';
 import type { Vehicle } from '../../types';
+import { useToastStore } from '../../store/toastStore';
 
 interface OrderHistoryItem {
   id: number;
@@ -19,6 +20,7 @@ const statusMap: Record<string, { label: string; color: string }> = {
 };
 
 export default function VehiclesPage() {
+  const addToast = useToastStore((state) => state.addToast);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
@@ -58,7 +60,7 @@ export default function VehiclesPage() {
     try {
       const res = await api.get<OrderHistoryItem[]>(`/vehicles/${v.id}/history`);
       setHistory(res.data || []); setIsOpen(true);
-    } catch { alert('خطأ في تحميل سجل الصيانة'); }
+    } catch { addToast('حدث خطأ في تحميل سجل الصيانة', 'error'); }
   };
 
   const handleAddVehicle = async (e: React.FormEvent) => {
@@ -68,10 +70,11 @@ export default function VehiclesPage() {
         customerId: parseInt(customerId), plateNumber, make, model,
         year: year ? parseInt(year) : null, color, vin, notes: vehNotes,
       });
+      addToast('تم إضافة السيارة بنجاح', 'success');
       setIsAddOpen(false);
       setCustomerId(''); setPlateNumber(''); setMake(''); setModel(''); setYear(''); setColor(''); setVin(''); setVehNotes('');
       fetchVehicles();
-    } catch { alert('خطأ في إضافة السيارة'); }
+    } catch { addToast('حدث خطأ أثناء إضافة السيارة', 'error'); }
   };
 
   return (
@@ -85,7 +88,7 @@ export default function VehiclesPage() {
 
       <div className="mk-card p-6">
         <div className="mb-4 relative max-w-md">
-          <input placeholder="بحث برقم اللوحة أو الماركة..." value={search} onChange={(e) => setSearch(e.target.value)} className="mk-input pr-10" />
+          <input placeholder="بحث باسم المالك أو الماركة أو الموديل..." value={search} onChange={(e) => setSearch(e.target.value)} className="mk-input pr-10" />
           <Search size={18} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }} />
         </div>
 

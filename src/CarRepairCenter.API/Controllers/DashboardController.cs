@@ -20,14 +20,11 @@ public class DashboardController : ControllerBase
     {
         var today = DateTime.UtcNow.Date;
 
-        // Run independent count queries in parallel
-        var todayOrdersTask = _db.RepairOrders.CountAsync(r => r.CreatedAt.Date == today);
-        var activeOrdersTask = _db.RepairOrders.CountAsync(r => r.Status == RepairStatus.Waiting || r.Status == RepairStatus.InProgress);
-        var todayRevenueTask = _db.Payments.Where(p => p.PaidAt.Date == today).SumAsync(p => (decimal?)p.Amount);
-        var lowStockItemsTask = _db.InventoryItems.CountAsync(i => i.Quantity <= i.MinStockLevel && i.IsActive);
-        var totalCustomersTask = _db.Customers.CountAsync();
-
-        await Task.WhenAll(todayOrdersTask, activeOrdersTask, todayRevenueTask, lowStockItemsTask, totalCustomersTask);
+        var todayOrders = await _db.RepairOrders.CountAsync(r => r.CreatedAt.Date == today);
+        var activeOrders = await _db.RepairOrders.CountAsync(r => r.Status == RepairStatus.Waiting || r.Status == RepairStatus.InProgress);
+        var todayRevenue = await _db.Payments.Where(p => p.PaidAt.Date == today).SumAsync(p => (decimal?)p.Amount) ?? 0m;
+        var lowStockItems = await _db.InventoryItems.CountAsync(i => i.Quantity <= i.MinStockLevel && i.IsActive);
+        var totalCustomers = await _db.Customers.CountAsync();
 
         // Calculate outstanding entirely in SQL — no entity materialization
         var totalOutstanding = await _db.RepairOrders
@@ -54,11 +51,11 @@ public class DashboardController : ControllerBase
             .OrderByDescending(r => r.CreatedAt).Take(5).ToListAsync();
 
         return Ok(new DashboardDto(
-            todayOrdersTask.Result, activeOrdersTask.Result, todayRevenueTask.Result ?? 0, totalOutstanding, lowStockItemsTask.Result, totalCustomersTask.Result,
+            todayOrders, activeOrders, todayRevenue, totalOutstanding, lowStockItems, totalCustomers,
             recentOrders.Select(r => new RepairOrderDto(
                 r.Id, r.OrderCode, r.CustomerId, r.Customer.Name, r.Customer.Phone,
                 r.VehicleId, r.Vehicle.PlateNumber, $"{r.Vehicle.Make} {r.Vehicle.Model}",
-                r.ProblemDescription, r.Status.ToString(), r.DiscountPercentage,
+                r.ProblemDescription, r.Status.ToString(), r.DiscountPercentage, r.EstimatedCost,
                 r.TotalServicesAmount, r.TotalPartsAmount, r.SubTotal,
                 r.DiscountAmount, r.TotalAmount, r.PaidAmount, r.RemainingAmount, r.IsFullyPaid,
                 r.Notes, r.CreatedAt, r.StartedAt, r.CompletedAt, r.DeliveredAt,
@@ -75,14 +72,13 @@ public class DashboardController : ControllerBase
     {
         var targetDate = date?.Date ?? DateTime.UtcNow.Date;
 
-        // Run independent queries in parallel
-        var paymentsTask = _db.Payments.Where(p => p.PaidAt.Date == targetDate).ToListAsync();
-        var ordersCreatedTask = _db.RepairOrders.CountAsync(r => r.CreatedAt.Date == targetDate);
-        var ordersCompletedTask = _db.RepairOrders.CountAsync(r => r.CompletedAt.HasValue && r.CompletedAt.Value.Date == targetDate);
-        var pendingOrdersTask = _db.RepairOrders.CountAsync(r => r.Status == RepairStatus.Waiting || r.Status == RepairStatus.InProgress);
+        var payments = await _db.Payments.Where(p => p.PaidAt.Date == targetDate).ToListAsync();
+        var ordersCreated = await _db.RepairOrders.CountAsync(r => r.CreatedAt.Date == targetDate);
+        var ordersCompleted = await _db.RepairOrders.CountAsync(r => r.CompletedAt.HasValue && r.CompletedAt.Value.Date == targetDate);
+        var pendingOrders = await _db.RepairOrders.CountAsync(r => r.Status == RepairStatus.Waiting || r.Status == RepairStatus.InProgress);
 
         // Calculate outstanding entirely in SQL — no full table load
-        var outstandingTask = _db.RepairOrders
+        var outstanding = await _db.RepairOrders
             .Select(r => new
             {
                 ServiceTotal = r.RepairOrderServices.Sum(s => (decimal?)s.Price) ?? 0m,
@@ -95,17 +91,12 @@ public class DashboardController : ControllerBase
                 Remaining = (x.ServiceTotal + x.PartsTotal) - ((x.ServiceTotal + x.PartsTotal) * x.DiscountPercentage / 100m) - x.Paid
             })
             .Where(x => x.Remaining > 0)
-            .SumAsync(x => (decimal?)x.Remaining);
-
-        await Task.WhenAll(paymentsTask, ordersCreatedTask, ordersCompletedTask, pendingOrdersTask, outstandingTask);
-
-        var payments = paymentsTask.Result;
-        var outstanding = outstandingTask.Result ?? 0m;
+            .SumAsync(x => (decimal?)x.Remaining) ?? 0m;
 
         var breakdown = payments.GroupBy(p => p.PaymentMethod)
             .Select(g => new PaymentMethodSummaryDto(g.Key.ToString(), g.Sum(p => p.Amount), g.Count()))
             .ToList();
 
-        return Ok(new DailyReportDto(targetDate, payments.Sum(p => p.Amount), ordersCreatedTask.Result, ordersCompletedTask.Result, pendingOrdersTask.Result, outstanding, breakdown));
+        return Ok(new DailyReportDto(targetDate, payments.Sum(p => p.Amount), ordersCreated, ordersCompleted, pendingOrders, outstanding, breakdown));
     }
 }

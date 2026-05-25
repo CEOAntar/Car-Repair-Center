@@ -18,11 +18,14 @@ public class PaymentsController : ControllerBase
     public PaymentsController(AppDbContext db) => _db = db;
 
     [HttpGet]
-    public async Task<ActionResult<List<PaymentDto>>> GetAll([FromQuery] int? repairOrderId, [FromQuery] DateTime? date)
+    public async Task<ActionResult<List<PaymentDto>>> GetAll([FromQuery] int? repairOrderId, [FromQuery] DateTime? date, [FromQuery] int? customerId, [FromQuery] string? search)
     {
         var query = _db.Payments.Include(p => p.RepairOrder).ThenInclude(r => r.Customer).AsQueryable();
         if (repairOrderId.HasValue) query = query.Where(p => p.RepairOrderId == repairOrderId.Value);
+        if (customerId.HasValue) query = query.Where(p => p.RepairOrder.CustomerId == customerId.Value);
         if (date.HasValue) query = query.Where(p => p.PaidAt.Date == date.Value.Date);
+        if (!string.IsNullOrWhiteSpace(search))
+            query = query.Where(p => p.RepairOrder.Customer.Name.Contains(search) || p.RepairOrder.Customer.CustomerCode.Contains(search) || p.RepairOrder.OrderCode.Contains(search));
 
         return Ok(await query.OrderByDescending(p => p.PaidAt)
             .Select(p => new PaymentDto(p.Id, p.RepairOrderId, p.RepairOrder.OrderCode, p.RepairOrder.Customer.Name, p.Amount, p.PaymentMethod.ToString(), p.Notes, p.PaidAt))
@@ -32,8 +35,19 @@ public class PaymentsController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<PaymentDto>> Create(CreatePaymentDto dto)
     {
-        var order = await _db.RepairOrders.Include(r => r.Customer).FirstOrDefaultAsync(r => r.Id == dto.RepairOrderId);
+        var order = await _db.RepairOrders
+            .Include(r => r.Customer)
+            .Include(r => r.RepairOrderServices)
+            .Include(r => r.RepairOrderParts)
+            .Include(r => r.Payments)
+            .FirstOrDefaultAsync(r => r.Id == dto.RepairOrderId);
         if (order is null) return BadRequest(new { message = "أمر الصيانة غير موجود" });
+
+        if (dto.Amount <= 0)
+            return BadRequest(new { message = "يجب أن تكون قيمة الدفعة أكبر من الصفر" });
+
+        if (dto.Amount > order.RemainingAmount)
+            return BadRequest(new { message = "قيمة الدفعة تتجاوز المبلغ المتبقي المطلوب للمطالبة!" });
 
         if (!Enum.TryParse<PaymentMethod>(dto.PaymentMethod, true, out var method))
             return BadRequest(new { message = "طريقة دفع غير صالحة" });

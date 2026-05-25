@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Wrench, Users, TrendingUp, AlertTriangle,
-  Clock, CheckCircle, Package, Car,
+  Clock, CheckCircle, Package, Car, Eye,
 } from 'lucide-react';
 import api from '../../services/api';
 import type { DashboardData, RepairOrder } from '../../types';
@@ -18,6 +19,7 @@ const formatCurrency = (val: number) => `${val.toLocaleString('ar-EG')} ج.م`;
 export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     api.get<DashboardData>('/dashboard').then((res) => {
@@ -83,11 +85,22 @@ export default function DashboardPage() {
                 return (
                   <div
                     key={order.id}
-                    className="flex items-center justify-between p-4 rounded-xl transition-all hover:scale-[1.01]"
+                    className="flex items-center justify-between p-4 rounded-xl cursor-pointer transition-all duration-200"
                     style={{
                       background: 'var(--bg-input)',
                       border: '1px solid var(--border-color)',
                     }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'color-mix(in srgb, var(--color-accent) 8%, var(--bg-input))';
+                      e.currentTarget.style.borderColor = 'var(--color-accent)';
+                      e.currentTarget.style.transform = 'translateX(-4px)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'var(--bg-input)';
+                      e.currentTarget.style.borderColor = 'var(--border-color)';
+                      e.currentTarget.style.transform = 'translateX(0)';
+                    }}
+                    onClick={() => navigate('/repair-orders', { state: { openOrderId: order.id } })}
                   >
                     <div className="flex items-center gap-4 min-w-0">
                       <div className="text-sm min-w-0">
@@ -110,6 +123,7 @@ export default function DashboardPage() {
                         <span className="status-dot" style={{ background: st.dotColor }} />
                         {st.label}
                       </span>
+                      <Eye size={14} style={{ color: 'var(--text-muted)' }} />
                     </div>
                   </div>
                 );

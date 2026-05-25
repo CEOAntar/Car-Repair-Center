@@ -1,7 +1,10 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Plus, Search, Eye, Play, CheckCircle, PackageCheck, Printer, Tag, Settings2, X } from 'lucide-react';
 import api from '../../services/api';
 import type { RepairOrder, Customer, Vehicle, Service, InventoryItem } from '../../types';
+import { useToastStore } from '../../store/toastStore';
+import SearchableSelect from '../../components/ui/SearchableSelect';
 
 const statusMap: Record<string, { label: string; color: string; dotColor: string }> = {
   Waiting:    { label: 'في الانتظار', color: 'var(--color-info)',    dotColor: 'var(--color-info)' },
@@ -13,6 +16,9 @@ const statusMap: Record<string, { label: string; color: string; dotColor: string
 const formatCurrency = (val: number) => `${val.toLocaleString('ar-EG')} ج.م`;
 
 export default function RepairOrdersPage() {
+  // Both Admin and Receptionist behave identically for order creation/editing
+  const addToast = useToastStore((state) => state.addToast);
+  const location = useLocation();
   const [orders, setOrders] = useState<RepairOrder[]>([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -27,6 +33,7 @@ export default function RepairOrdersPage() {
   const [problemDescription, setProblemDescription] = useState('');
   const [notes, setNotes] = useState('');
   const [discountPercentage, setDiscountPercentage] = useState('0');
+  const [estimatedCost, setEstimatedCost] = useState('1000');
 
   // Detail/Edit Workspace Dialog state
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -80,6 +87,16 @@ export default function RepairOrdersPage() {
     api.get<InventoryItem[]>('/inventory').then((res) => setInventoryItems(res.data));
   }, []);
 
+  // Auto-open order details when navigating from dashboard
+  useEffect(() => {
+    const state = location.state as { openOrderId?: number } | null;
+    if (state?.openOrderId) {
+      handleViewDetails(state.openOrderId);
+      // Clear the state so it doesn't re-open on refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
+
   const handleCustomerChange = async (cid: string) => {
     setSelectedCustomerId(cid);
     setSelectedVehicleId('');
@@ -99,14 +116,17 @@ export default function RepairOrdersPage() {
       problemDescription,
       notes,
       discountPercentage: parseFloat(discountPercentage) || 0,
+      estimatedCost: parseFloat(estimatedCost) || 0,
     };
     try {
       await api.post('/repairorders', payload);
+      addToast('تم فتح أمر صيانة جديد بنجاح', 'success');
       setIsCreateOpen(false);
       fetchOrders();
       resetCreateForm();
-    } catch {
-      alert('خطأ في إنشاء أمر الصيانة');
+    } catch (err: any) {
+      const msg = err.response?.data?.message || 'خطأ في إنشاء أمر الصيانة';
+      addToast(msg, 'error');
     }
   };
 
@@ -116,6 +136,7 @@ export default function RepairOrdersPage() {
     setProblemDescription('');
     setNotes('');
     setDiscountPercentage('0');
+    setEstimatedCost('1000');
   };
 
   const handleViewDetails = async (orderId: number) => {
@@ -124,7 +145,7 @@ export default function RepairOrdersPage() {
       setSelectedOrder(res.data);
       setIsDetailOpen(true);
     } catch {
-      alert('خطأ في تحميل تفاصيل أمر الصيانة');
+      addToast('خطأ في تحميل تفاصيل أمر الصيانة', 'error');
     }
   };
 
@@ -132,10 +153,12 @@ export default function RepairOrdersPage() {
     if (!selectedOrder) return;
     try {
       await api.patch(`/repairorders/${selectedOrder.id}/status`, { status: newStatus });
+      addToast('تم تحديث حالة الصيانة بنجاح', 'success');
       handleViewDetails(selectedOrder.id);
       refreshOrdersInBackground();
-    } catch {
-      alert('خطأ في تحديث الحالة');
+    } catch (err: any) {
+      const msg = err.response?.data?.message || 'خطأ في تحديث الحالة';
+      addToast(msg, 'error');
     }
   };
 
@@ -148,12 +171,14 @@ export default function RepairOrdersPage() {
         serviceId: svc.id,
         price: parseFloat(servicePrice) || svc.defaultPrice,
       });
+      addToast('تم إضافة الخدمة بنجاح', 'success');
       setServiceIdToAdd('');
       setServicePrice('');
       handleViewDetails(selectedOrder.id);
       refreshOrdersInBackground();
-    } catch {
-      alert('خطأ في إضافة الخدمة');
+    } catch (err: any) {
+      const msg = err.response?.data?.message || 'خطأ في إضافة الخدمة';
+      addToast(msg, 'error');
     }
   };
 
@@ -161,10 +186,12 @@ export default function RepairOrdersPage() {
     if (!selectedOrder) return;
     try {
       await api.delete(`/repairorders/${selectedOrder.id}/services/${serviceLineId}`);
+      addToast('تم حذف الخدمة بنجاح', 'success');
       handleViewDetails(selectedOrder.id);
       refreshOrdersInBackground();
-    } catch {
-      alert('خطأ في حذف الخدمة');
+    } catch (err: any) {
+      const msg = err.response?.data?.message || 'خطأ في حذف الخدمة';
+      addToast(msg, 'error');
     }
   };
 
@@ -178,16 +205,18 @@ export default function RepairOrdersPage() {
         quantity: parseInt(partQty),
         unitPrice: partPrice ? parseFloat(partPrice) : part.unitPrice,
       });
+      addToast('تم إضافة قطعة الغيار بنجاح', 'success');
       if (res.data.warning) {
-        alert(res.data.warning);
+        addToast(res.data.warning, 'warning');
       }
       setPartIdToAdd('');
       setPartQty('1');
       setPartPrice('');
       handleViewDetails(selectedOrder.id);
       refreshOrdersInBackground();
-    } catch {
-      alert('خطأ في إضافة قطعة الغيار');
+    } catch (err: any) {
+      const msg = err.response?.data?.message || 'خطأ في إضافة قطعة الغيار';
+      addToast(msg, 'error');
     }
   };
 
@@ -195,10 +224,12 @@ export default function RepairOrdersPage() {
     if (!selectedOrder) return;
     try {
       await api.delete(`/repairorders/${selectedOrder.id}/parts/${partLineId}`);
+      addToast('تم حذف قطعة الغيار بنجاح', 'success');
       handleViewDetails(selectedOrder.id);
       refreshOrdersInBackground();
-    } catch {
-      alert('خطأ في حذف قطعة الغيار');
+    } catch (err: any) {
+      const msg = err.response?.data?.message || 'خطأ في حذف قطعة الغيار';
+      addToast(msg, 'error');
     }
   };
 
@@ -211,32 +242,37 @@ export default function RepairOrdersPage() {
         paymentMethod: payMethod,
         notes: payNotes,
       });
+      addToast('تم تسجيل الدفعة بنجاح', 'success');
       setPayAmount('');
       setPayNotes('');
       handleViewDetails(selectedOrder.id);
       refreshOrdersInBackground();
-    } catch {
-      alert('خطأ في تسجيل الدفعة');
+    } catch (err: any) {
+      const msg = err.response?.data?.message || 'خطأ في تسجيل الدفعة';
+      addToast(msg, 'error');
     }
   };
 
   // Debounce discount changes to avoid API call on every keystroke
-  const discountTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const discountTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handleApplyDiscount = (perc: string) => {
     if (!selectedOrder) return;
     const numPerc = parseFloat(perc) || 0;
-    // Optimistic UI update
     setSelectedOrder({ ...selectedOrder, discountPercentage: numPerc });
-    clearTimeout(discountTimerRef.current);
+    if (discountTimerRef.current) {
+      clearTimeout(discountTimerRef.current);
+    }
     discountTimerRef.current = setTimeout(async () => {
       try {
         await api.patch(`/repairorders/${selectedOrder.id}/discount`, numPerc, {
           headers: { 'Content-Type': 'application/json' },
         });
+        addToast('تم تحديث الخصم بنجاح', 'success');
         handleViewDetails(selectedOrder.id);
         refreshOrdersInBackground();
-      } catch {
-        alert('خطأ في تطبيق الخصم');
+      } catch (err: any) {
+        const msg = err.response?.data?.message || 'خطأ في تطبيق الخصم';
+        addToast(msg, 'error');
       }
     }, 500);
   };
@@ -244,6 +280,10 @@ export default function RepairOrdersPage() {
   const printInvoice = () => {
     window.print();
   };
+
+  const isOrderReadOnly = selectedOrder
+    ? (selectedOrder.status === 'Done' || selectedOrder.status === 'Delivered')
+    : false;
 
   return (
     <div className="space-y-6">
@@ -262,7 +302,7 @@ export default function RepairOrdersPage() {
       <div className="flex flex-wrap gap-4 items-center no-print">
         <div className="relative max-w-xs flex-1">
           <input
-            placeholder="بحث برقم الأمر أو لوحة السيارة..."
+            placeholder="بحث برقم الأمر أو اسم العميل..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="mk-input pr-10"
@@ -349,17 +389,17 @@ export default function RepairOrdersPage() {
             <form onSubmit={handleCreateOrder} className="space-y-4">
               <div className="flex flex-col gap-1">
                 <label className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>العميل</label>
-                <select
+                <SearchableSelect
+                  options={customers.map((c) => ({
+                    value: String(c.id),
+                    label: `${c.name} (${c.phone})`,
+                    sublabel: c.customerCode ? `كود: ${c.customerCode}${c.address ? ` — ${c.address}` : ''}` : undefined,
+                  }))}
                   value={selectedCustomerId}
-                  onChange={(e) => handleCustomerChange(e.target.value)}
+                  onChange={(val) => handleCustomerChange(val)}
+                  placeholder="ابحث باسم العميل أو رقم الهاتف..."
                   required
-                  className="mk-select"
-                >
-                  <option value="">اختر العميل</option>
-                  {customers.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name} ({c.phone})</option>
-                  ))}
-                </select>
+                />
               </div>
 
               <div className="flex flex-col gap-1">
@@ -387,6 +427,18 @@ export default function RepairOrdersPage() {
                   placeholder="صف العطل أو المطلوب عمله بالتفصيل..."
                   className="mk-input h-24"
                   style={{ resize: 'none' }}
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>التكلفة التقديرية المبدئية (ج.م) *</label>
+                <input
+                  type="number"
+                  required
+                  min="1"
+                  value={estimatedCost}
+                  onChange={(e) => setEstimatedCost(e.target.value)}
+                  className="mk-input"
                 />
               </div>
 
@@ -489,30 +541,32 @@ export default function RepairOrdersPage() {
               </div>
 
               {/* Payments Panel */}
-              <div className="mk-card p-5 space-y-4">
-                <h3 className="text-base font-display font-bold" style={{ color: 'var(--text-primary)' }}>تسجيل دفعة / مبلغ مالي</h3>
-                <div className="space-y-3">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>المبلغ المدفوع (ج.م)</label>
-                    <input type="number" value={payAmount} onChange={(e) => setPayAmount(e.target.value)} className="mk-input" />
+              {!isOrderReadOnly && selectedOrder.remainingAmount > 0 && (
+                <div className="mk-card p-5 space-y-4">
+                  <h3 className="text-base font-display font-bold" style={{ color: 'var(--text-primary)' }}>تسجيل دفعة / مبلغ مالي</h3>
+                  <div className="space-y-3">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>المبلغ المدفوع (ج.م)</label>
+                      <input type="number" value={payAmount} onChange={(e) => setPayAmount(e.target.value)} className="mk-input" />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>طريقة الدفع</label>
+                      <select value={payMethod} onChange={(e) => setPayMethod(e.target.value)} className="mk-select">
+                        <option value="Cash">نقدي</option>
+                        <option value="Visa">فيزا / كارت</option>
+                        <option value="VodafoneCash">فودافون كاش</option>
+                      </select>
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>ملاحظات</label>
+                      <input value={payNotes} onChange={(e) => setPayNotes(e.target.value)} className="mk-input" />
+                    </div>
+                    <button onClick={handleAddPayment} className="mk-btn mk-btn-primary w-full mt-2">
+                      تسجيل الدفعة
+                    </button>
                   </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>طريقة الدفع</label>
-                    <select value={payMethod} onChange={(e) => setPayMethod(e.target.value)} className="mk-select">
-                      <option value="Cash">نقدي</option>
-                      <option value="Visa">فيزا / كارت</option>
-                      <option value="VodafoneCash">فودافون كاش</option>
-                    </select>
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>ملاحظات</label>
-                    <input value={payNotes} onChange={(e) => setPayNotes(e.target.value)} className="mk-input" />
-                  </div>
-                  <button onClick={handleAddPayment} className="mk-btn mk-btn-primary w-full mt-2">
-                    تسجيل الدفعة
-                  </button>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Middle/Right Column: Services & Parts Input */}
@@ -523,18 +577,20 @@ export default function RepairOrdersPage() {
                   <h3 className="text-base font-display font-bold flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
                     <Settings2 size={18} style={{ color: 'var(--color-accent)' }} /> الخدمات المطلوبة
                   </h3>
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <select value={serviceIdToAdd} onChange={(e) => setServiceIdToAdd(e.target.value)} className="mk-select flex-1">
-                      <option value="">اختر الخدمة من الدليل...</option>
-                      {services.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.name} (افتراضي: {formatCurrency(s.defaultPrice)})
-                        </option>
-                      ))}
-                    </select>
-                    <input placeholder="السعر" type="number" value={servicePrice} onChange={(e) => setServicePrice(e.target.value)} className="mk-input w-full sm:w-32" />
-                    <button onClick={handleAddService} className="mk-btn mk-btn-primary shrink-0">إضافة</button>
-                  </div>
+                  {!isOrderReadOnly && (
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <select value={serviceIdToAdd} onChange={(e) => setServiceIdToAdd(e.target.value)} className="mk-select flex-1">
+                        <option value="">اختر الخدمة من الدليل...</option>
+                        {services.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.name} (افتراضي: {formatCurrency(s.defaultPrice)})
+                          </option>
+                        ))}
+                      </select>
+                      <input placeholder="السعر" type="number" value={servicePrice} onChange={(e) => setServicePrice(e.target.value)} className="mk-input w-full sm:w-32" />
+                      <button onClick={handleAddService} className="mk-btn mk-btn-primary shrink-0">إضافة</button>
+                    </div>
+                  )}
 
                   <div className="overflow-x-auto rounded-xl" style={{ border: '1px solid var(--border-color)', background: 'var(--bg-input)' }}>
                     <table className="mk-table text-xs">
@@ -550,7 +606,9 @@ export default function RepairOrdersPage() {
                               <td className="px-4 font-semibold" style={{ color: 'var(--text-primary)' }}>{s.serviceName}</td>
                               <td className="font-mono-code currency" style={{ color: 'var(--text-primary)' }}>{s.price.toLocaleString('ar-EG')}</td>
                               <td className="px-4 text-left">
-                                <button onClick={() => handleRemoveService(s.id)} className="text-xs font-semibold cursor-pointer" style={{ color: 'var(--color-danger)' }}>حذف</button>
+                                {!isOrderReadOnly && (
+                                  <button onClick={() => handleRemoveService(s.id)} className="text-xs font-semibold cursor-pointer" style={{ color: 'var(--color-danger)' }}>حذف</button>
+                                )}
                               </td>
                             </tr>
                           ))
@@ -565,21 +623,23 @@ export default function RepairOrdersPage() {
                   <h3 className="text-base font-display font-bold flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
                     <PackageCheck size={18} style={{ color: 'var(--color-accent)' }} /> قطع الغيار المستهلكة
                   </h3>
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <select value={partIdToAdd} onChange={(e) => setPartIdToAdd(e.target.value)} className="mk-select flex-1">
-                      <option value="">اختر قطعة الغيار من المستودع...</option>
-                      {inventoryItems.map((item) => (
-                        <option key={item.id} value={item.id}>
-                          {item.name} ({item.quantity} {item.unit} متاح - {formatCurrency(item.unitPrice)})
-                        </option>
-                      ))}
-                    </select>
-                    <div className="flex gap-2 w-full sm:w-auto">
-                      <input placeholder="الكمية" type="number" value={partQty} onChange={(e) => setPartQty(e.target.value)} className="mk-input w-20" />
-                      <input placeholder="السعر" type="number" value={partPrice} onChange={(e) => setPartPrice(e.target.value)} className="mk-input w-28" />
+                  {!isOrderReadOnly && (
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <select value={partIdToAdd} onChange={(e) => setPartIdToAdd(e.target.value)} className="mk-select flex-1">
+                        <option value="">اختر قطعة الغيار من المستودع...</option>
+                        {inventoryItems.map((item) => (
+                          <option key={item.id} value={item.id}>
+                            {item.name} ({item.quantity} {item.unit} متاح - {formatCurrency(item.unitPrice)})
+                          </option>
+                        ))}
+                      </select>
+                      <div className="flex gap-2 w-full sm:w-auto">
+                        <input placeholder="الكمية" type="number" value={partQty} onChange={(e) => setPartQty(e.target.value)} className="mk-input w-20" />
+                        <input placeholder="السعر" type="number" value={partPrice} onChange={(e) => setPartPrice(e.target.value)} className="mk-input w-28" />
+                      </div>
+                      <button onClick={handleAddPart} className="mk-btn mk-btn-primary shrink-0">إضافة</button>
                     </div>
-                    <button onClick={handleAddPart} className="mk-btn mk-btn-primary shrink-0">إضافة</button>
-                  </div>
+                  )}
 
                   <div className="overflow-x-auto rounded-xl" style={{ border: '1px solid var(--border-color)', background: 'var(--bg-input)' }}>
                     <table className="mk-table text-xs">
@@ -597,7 +657,9 @@ export default function RepairOrdersPage() {
                               <td className="font-mono-code currency" style={{ color: 'var(--text-secondary)' }}>{p.unitPrice.toLocaleString('ar-EG')}</td>
                               <td className="font-mono-code font-bold currency" style={{ color: 'var(--text-primary)' }}>{p.totalPrice.toLocaleString('ar-EG')}</td>
                               <td className="px-4 text-left">
-                                <button onClick={() => handleRemovePart(p.id)} className="text-xs font-semibold cursor-pointer" style={{ color: 'var(--color-danger)' }}>حذف</button>
+                                {!isOrderReadOnly && (
+                                  <button onClick={() => handleRemovePart(p.id)} className="text-xs font-semibold cursor-pointer" style={{ color: 'var(--color-danger)' }}>حذف</button>
+                                )}
                               </td>
                             </tr>
                           ))
@@ -620,9 +682,10 @@ export default function RepairOrdersPage() {
                     </div>
                     <input
                       type="number"
+                      disabled={isOrderReadOnly}
                       value={selectedOrder.discountPercentage}
                       onChange={(e) => handleApplyDiscount(e.target.value)}
-                      className="mk-input py-1 mt-1 font-mono-code font-semibold"
+                      className="mk-input py-1 mt-1 font-mono-code font-semibold disabled:opacity-50"
                       style={{ height: 'auto', width: '80px', fontSize: '0.875rem' }}
                     />
                   </div>

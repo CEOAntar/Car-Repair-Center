@@ -15,7 +15,7 @@ namespace CarRepairCenter.Infrastructure.Migrations
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "10.0.8");
+            modelBuilder.HasAnnotation("ProductVersion", "9.0.15");
 
             modelBuilder.Entity("CarRepairCenter.Core.Entities.Customer", b =>
                 {
@@ -173,6 +173,10 @@ namespace CarRepairCenter.Infrastructure.Migrations
 
                     b.Property<decimal>("DiscountPercentage")
                         .HasPrecision(5, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("EstimatedCost")
+                        .HasPrecision(18, 2)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Notes")

@@ -61,6 +61,7 @@ public class AppDbContext : IdentityDbContext<AppUser>
             e.HasIndex(r => r.CustomerId);
             e.HasIndex(r => r.VehicleId);
             e.Property(r => r.DiscountPercentage).HasPrecision(5, 2);
+            e.Property(r => r.EstimatedCost).HasPrecision(18, 2);
 
             e.Ignore(r => r.TotalServicesAmount);
             e.Ignore(r => r.TotalPartsAmount);

@@ -40,7 +40,7 @@ export default function PaymentsPage() {
       <div className="mk-card p-6">
         <div className="mb-4 relative max-w-md">
           <input
-            placeholder="بحث برقم الإيصال أو الملاحظات..."
+            placeholder="بحث باسم العميل أو كود العميل أو رقم الأمر..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="mk-input pr-10"

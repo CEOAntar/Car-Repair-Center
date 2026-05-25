@@ -26,8 +26,8 @@ public record CreateInventoryItemDto([Required] string Name, string? Category, i
 public record UpdateInventoryItemDto([Required] string Name, string? Category, int Quantity, [Required] decimal UnitPrice, int MinStockLevel, string Unit, bool IsActive);
 
 // ── RepairOrder ──
-public record RepairOrderDto(int Id, string OrderCode, int CustomerId, string CustomerName, string CustomerPhone, int VehicleId, string VehiclePlate, string VehicleMakeModel, string ProblemDescription, string Status, decimal DiscountPercentage, decimal TotalServicesAmount, decimal TotalPartsAmount, decimal SubTotal, decimal DiscountAmount, decimal TotalAmount, decimal PaidAmount, decimal RemainingAmount, bool IsFullyPaid, string? Notes, DateTime CreatedAt, DateTime? StartedAt, DateTime? CompletedAt, DateTime? DeliveredAt, List<RepairOrderServiceDto> Services, List<RepairOrderPartDto> Parts, List<PaymentDto> Payments);
-public record CreateRepairOrderDto(int CustomerId, int VehicleId, [Required] string ProblemDescription, string? Notes, decimal DiscountPercentage);
+public record RepairOrderDto(int Id, string OrderCode, int CustomerId, string CustomerName, string CustomerPhone, int VehicleId, string VehiclePlate, string VehicleMakeModel, string ProblemDescription, string Status, decimal DiscountPercentage, decimal EstimatedCost, decimal TotalServicesAmount, decimal TotalPartsAmount, decimal SubTotal, decimal DiscountAmount, decimal TotalAmount, decimal PaidAmount, decimal RemainingAmount, bool IsFullyPaid, string? Notes, DateTime CreatedAt, DateTime? StartedAt, DateTime? CompletedAt, DateTime? DeliveredAt, List<RepairOrderServiceDto> Services, List<RepairOrderPartDto> Parts, List<PaymentDto> Payments);
+public record CreateRepairOrderDto(int CustomerId, int VehicleId, [Required] string ProblemDescription, string? Notes, decimal DiscountPercentage, decimal EstimatedCost);
 public record UpdateRepairOrderStatusDto([Required] string Status);
 
 // ── RepairOrderService ──

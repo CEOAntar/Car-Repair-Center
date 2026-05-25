@@ -18,7 +18,7 @@ public class RepairOrdersController : ControllerBase
     public RepairOrdersController(AppDbContext db) => _db = db;
 
     [HttpGet]
-    public async Task<ActionResult<List<RepairOrderDto>>> GetAll([FromQuery] string? status, [FromQuery] string? search)
+    public async Task<ActionResult<List<RepairOrderDto>>> GetAll([FromQuery] string? status, [FromQuery] string? search, [FromQuery] int? customerId)
     {
         var query = _db.RepairOrders
             .AsNoTracking()
@@ -32,8 +32,10 @@ public class RepairOrdersController : ControllerBase
 
         if (!string.IsNullOrWhiteSpace(status) && Enum.TryParse<RepairStatus>(status, true, out var s))
             query = query.Where(r => r.Status == s);
+        if (customerId.HasValue)
+            query = query.Where(r => r.CustomerId == customerId.Value);
         if (!string.IsNullOrWhiteSpace(search))
-            query = query.Where(r => r.OrderCode.Contains(search) || r.Customer.Name.Contains(search) || r.Vehicle.PlateNumber.Contains(search));
+            query = query.Where(r => r.OrderCode.Contains(search) || r.Customer.Name.Contains(search) || r.Customer.CustomerCode.Contains(search));
 
         var orders = await query.OrderByDescending(r => r.CreatedAt).ToListAsync();
         return Ok(orders.Select(MapToDto).ToList());
@@ -65,6 +67,9 @@ public class RepairOrdersController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<RepairOrderDto>> Create(CreateRepairOrderDto dto)
     {
+        if (dto.EstimatedCost <= 0)
+            return BadRequest(new { message = "يجب تحديد التكلفة التقديرية أكبر من الصفر" });
+
         var lastCode = await _db.RepairOrders.OrderByDescending(r => r.Id).Select(r => r.OrderCode).FirstOrDefaultAsync();
         var nextNum = 1;
         if (lastCode is not null && int.TryParse(lastCode.Replace("REP-", ""), out var n)) nextNum = n + 1;
@@ -78,6 +83,7 @@ public class RepairOrdersController : ControllerBase
             ProblemDescription = dto.ProblemDescription,
             Notes = dto.Notes,
             DiscountPercentage = dto.DiscountPercentage,
+            EstimatedCost = dto.EstimatedCost,
             CreatedByUserId = userId
         };
         _db.RepairOrders.Add(order);
@@ -95,6 +101,10 @@ public class RepairOrdersController : ControllerBase
         if (!Enum.TryParse<RepairStatus>(dto.Status, true, out var newStatus))
             return BadRequest(new { message = "حالة غير صالحة" });
 
+        // Completed/Delivered orders are FULLY read-only for ALL roles
+        if (order.Status == RepairStatus.Done || order.Status == RepairStatus.Delivered)
+            return BadRequest(new { message = "لا يمكن تعديل حالة أمر صيانة مكتمل أو تم تسليمه" });
+
         order.Status = newStatus;
         switch (newStatus)
         {
@@ -109,8 +119,24 @@ public class RepairOrdersController : ControllerBase
     [HttpPatch("{id}/discount")]
     public async Task<IActionResult> UpdateDiscount(int id, [FromBody] decimal discountPercentage)
     {
-        var order = await _db.RepairOrders.FindAsync(id);
+        var order = await LoadOrder(id, true);
         if (order is null) return NotFound();
+
+        // Completed/Delivered orders are FULLY read-only for ALL roles
+        if (order.Status == RepairStatus.Done || order.Status == RepairStatus.Delivered)
+            return BadRequest(new { message = "لا يمكن تعديل هذا الأمر لأنه مكتمل أو تم تسليمه" });
+
+        if (order.EstimatedCost > 0)
+        {
+            var hypotheticalSubTotal = order.SubTotal;
+            var hypotheticalDiscount = hypotheticalSubTotal * (discountPercentage / 100m);
+            var hypotheticalTotal = hypotheticalSubTotal - hypotheticalDiscount;
+            if (hypotheticalTotal > order.EstimatedCost * 2.0m)
+            {
+                return BadRequest(new { message = "المبلغ الإجمالي يتجاوز الحد المسموح به للتكلفة التقديرية (الحد الأقصى هو ضعف التكلفة التقديرية)" });
+            }
+        }
+
         order.DiscountPercentage = discountPercentage;
         await _db.SaveChangesAsync();
         return NoContent();
@@ -120,8 +146,25 @@ public class RepairOrdersController : ControllerBase
     [HttpPost("{id}/services")]
     public async Task<IActionResult> AddService(int id, AddRepairOrderServiceDto dto)
     {
-        var order = await _db.RepairOrders.FindAsync(id);
+        var order = await LoadOrder(id, true);
         if (order is null) return NotFound();
+
+        // Completed/Delivered orders are FULLY read-only for ALL roles
+        if (order.Status == RepairStatus.Done || order.Status == RepairStatus.Delivered)
+            return BadRequest(new { message = "لا يمكن تعديل هذا الأمر لأنه مكتمل أو تم تسليمه" });
+
+        if (order.EstimatedCost > 0)
+        {
+            var currentServicesSum = order.RepairOrderServices.Sum(s => s.Price) + dto.Price;
+            var currentPartsSum = order.RepairOrderParts.Sum(p => p.TotalPrice);
+            var hypotheticalSubTotal = currentServicesSum + currentPartsSum;
+            var hypotheticalDiscount = hypotheticalSubTotal * (order.DiscountPercentage / 100m);
+            var hypotheticalTotal = hypotheticalSubTotal - hypotheticalDiscount;
+            if (hypotheticalTotal > order.EstimatedCost * 2.0m)
+            {
+                return BadRequest(new { message = "المبلغ الإجمالي يتجاوز الحد المسموح به للتكلفة التقديرية (الحد الأقصى هو ضعف التكلفة التقديرية)" });
+            }
+        }
 
         _db.RepairOrderServices.Add(new RepairOrderService
         {
@@ -137,8 +180,16 @@ public class RepairOrdersController : ControllerBase
     [HttpDelete("{orderId}/services/{serviceLineId}")]
     public async Task<IActionResult> RemoveService(int orderId, int serviceLineId)
     {
-        var line = await _db.RepairOrderServices.FirstOrDefaultAsync(s => s.Id == serviceLineId && s.RepairOrderId == orderId);
+        var order = await LoadOrder(orderId, true);
+        if (order is null) return NotFound();
+
+        // Completed/Delivered orders are FULLY read-only for ALL roles
+        if (order.Status == RepairStatus.Done || order.Status == RepairStatus.Delivered)
+            return BadRequest(new { message = "لا يمكن تعديل هذا الأمر لأنه مكتمل أو تم تسليمه" });
+
+        var line = order.RepairOrderServices.FirstOrDefault(s => s.Id == serviceLineId);
         if (line is null) return NotFound();
+
         _db.RepairOrderServices.Remove(line);
         await _db.SaveChangesAsync();
         return NoContent();
@@ -148,11 +199,31 @@ public class RepairOrdersController : ControllerBase
     [HttpPost("{id}/parts")]
     public async Task<IActionResult> AddPart(int id, AddRepairOrderPartDto dto)
     {
-        var order = await _db.RepairOrders.FindAsync(id);
+        var order = await LoadOrder(id, true);
         if (order is null) return NotFound();
+
+        // Completed/Delivered orders are FULLY read-only for ALL roles
+        if (order.Status == RepairStatus.Done || order.Status == RepairStatus.Delivered)
+            return BadRequest(new { message = "لا يمكن تعديل هذا الأمر لأنه مكتمل أو تم تسليمه" });
 
         var item = await _db.InventoryItems.FindAsync(dto.InventoryItemId);
         if (item is null) return BadRequest(new { message = "قطعة الغيار غير موجودة" });
+
+        var partPrice = dto.UnitPrice ?? item.UnitPrice;
+        var partTotalPrice = dto.Quantity * partPrice;
+
+        if (order.EstimatedCost > 0)
+        {
+            var currentServicesSum = order.RepairOrderServices.Sum(s => s.Price);
+            var currentPartsSum = order.RepairOrderParts.Sum(p => p.TotalPrice) + partTotalPrice;
+            var hypotheticalSubTotal = currentServicesSum + currentPartsSum;
+            var hypotheticalDiscount = hypotheticalSubTotal * (order.DiscountPercentage / 100m);
+            var hypotheticalTotal = hypotheticalSubTotal - hypotheticalDiscount;
+            if (hypotheticalTotal > order.EstimatedCost * 2.0m)
+            {
+                return BadRequest(new { message = "المبلغ الإجمالي يتجاوز الحد المسموح به للتكلفة التقديرية (الحد الأقصى هو ضعف التكلفة التقديرية)" });
+            }
+        }
 
         // Warn if stock is low but don't block
         var warning = item.Quantity < dto.Quantity
@@ -166,7 +237,7 @@ public class RepairOrdersController : ControllerBase
             RepairOrderId = id,
             InventoryItemId = dto.InventoryItemId,
             Quantity = dto.Quantity,
-            UnitPrice = dto.UnitPrice ?? item.UnitPrice
+            UnitPrice = partPrice
         });
         await _db.SaveChangesAsync();
         return Ok(new { warning });
@@ -175,7 +246,14 @@ public class RepairOrdersController : ControllerBase
     [HttpDelete("{orderId}/parts/{partLineId}")]
     public async Task<IActionResult> RemovePart(int orderId, int partLineId)
     {
-        var line = await _db.RepairOrderParts.FirstOrDefaultAsync(p => p.Id == partLineId && p.RepairOrderId == orderId);
+        var order = await LoadOrder(orderId, true);
+        if (order is null) return NotFound();
+
+        // Completed/Delivered orders are FULLY read-only for ALL roles
+        if (order.Status == RepairStatus.Done || order.Status == RepairStatus.Delivered)
+            return BadRequest(new { message = "لا يمكن تعديل هذا الأمر لأنه مكتمل أو تم تسليمه" });
+
+        var line = order.RepairOrderParts.FirstOrDefault(p => p.Id == partLineId);
         if (line is null) return NotFound();
 
         // Restore inventory
@@ -208,7 +286,7 @@ public class RepairOrdersController : ControllerBase
         r.CustomerId, r.Customer.Name, r.Customer.Phone,
         r.VehicleId, r.Vehicle.PlateNumber, $"{r.Vehicle.Make} {r.Vehicle.Model}",
         r.ProblemDescription, r.Status.ToString(),
-        r.DiscountPercentage,
+        r.DiscountPercentage, r.EstimatedCost,
         r.TotalServicesAmount, r.TotalPartsAmount, r.SubTotal,
         r.DiscountAmount, r.TotalAmount, r.PaidAmount, r.RemainingAmount, r.IsFullyPaid,
         r.Notes, r.CreatedAt, r.StartedAt, r.CompletedAt, r.DeliveredAt,

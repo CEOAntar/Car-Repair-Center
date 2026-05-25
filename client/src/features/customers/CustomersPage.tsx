@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react';
 import { Plus, Search, Edit2, Eye, X } from 'lucide-react';
 import api from '../../services/api';
 import type { Customer, Vehicle } from '../../types';
+import { useToastStore } from '../../store/toastStore';
 
 export default function CustomersPage() {
+  const addToast = useToastStore((state) => state.addToast);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
@@ -48,9 +50,11 @@ export default function CustomersPage() {
       if (selectedCustomerId) {
         await api.put(`/customers/${selectedCustomerId}`, payload);
         cust = customers.find(c => c.id === selectedCustomerId) || null;
+        addToast('تم تحديث بيانات العميل بنجاح', 'success');
       } else {
         const res = await api.post<Customer>('/customers', payload);
         cust = res.data;
+        addToast('تم إضافة العميل بنجاح', 'success');
       }
       resetForm(); setIsAddOpen(false); fetchCustomers();
       if (addCarAfter && cust) {
@@ -58,7 +62,7 @@ export default function CustomersPage() {
         resetVehForm();
         setIsVehOpen(true);
       }
-    } catch { alert('خطأ في حفظ بيانات العميل'); }
+    } catch { addToast('حدث خطأ أثناء حفظ بيانات العميل', 'error'); }
   };
 
   const handleSubmitCustomer = async (e: React.FormEvent) => {
@@ -77,7 +81,7 @@ export default function CustomersPage() {
     try {
       const vRes = await api.get<Vehicle[]>(`/vehicles?customerId=${c.id}`);
       setCustomerVehicles(vRes.data); setIsViewOpen(true);
-    } catch { alert('خطأ في تحميل مركبات العميل'); }
+    } catch { addToast('حدث خطأ في تحميل مركبات العميل', 'error'); }
   };
 
   const handleAddVehicle = async (e: React.FormEvent) => {
@@ -88,10 +92,12 @@ export default function CustomersPage() {
         customerId: selectedCustomer.id, plateNumber, make, model,
         year: year ? parseInt(year) : null, color, vin, notes: vehNotes,
       });
+      addToast('تم إضافة السيارة بنجاح', 'success');
       setIsVehOpen(false);
       const vRes = await api.get<Vehicle[]>(`/vehicles?customerId=${selectedCustomer.id}`);
       setCustomerVehicles(vRes.data || []); fetchCustomers();
     } catch {
+      addToast('حدث خطأ أثناء إضافة السيارة', 'error');
       try {
         const vRes = await api.get<Vehicle[]>(`/vehicles?customerId=${selectedCustomer.id}`);
         setCustomerVehicles(vRes.data || []);

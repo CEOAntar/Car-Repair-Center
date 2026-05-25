@@ -94,6 +94,7 @@ export interface RepairOrder {
   problemDescription: string;
   status: string;
   discountPercentage: number;
+  estimatedCost: number;
   totalServicesAmount: number;
   totalPartsAmount: number;
   subTotal: number;

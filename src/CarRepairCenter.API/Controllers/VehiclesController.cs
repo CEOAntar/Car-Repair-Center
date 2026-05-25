@@ -22,7 +22,7 @@ public class VehiclesController : ControllerBase
         if (customerId.HasValue)
             query = query.Where(v => v.CustomerId == customerId.Value);
         if (!string.IsNullOrWhiteSpace(search))
-            query = query.Where(v => v.PlateNumber.Contains(search) || v.Make.Contains(search) || v.Model.Contains(search));
+            query = query.Where(v => v.Customer.Name.Contains(search) || v.Customer.CustomerCode.Contains(search) || v.Make.Contains(search) || v.Model.Contains(search));
 
         var vehicles = await query.OrderByDescending(v => v.CreatedAt)
             .Select(v => new VehicleDto(v.Id, v.CustomerId, v.Customer.Name, v.PlateNumber, v.Make, v.Model, v.Year, v.Color, v.VIN, v.Notes, v.CreatedAt))

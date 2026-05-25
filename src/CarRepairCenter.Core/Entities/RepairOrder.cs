@@ -23,6 +23,11 @@ public class RepairOrder
     /// </summary>
     public decimal DiscountPercentage { get; set; } = 0;
 
+    /// <summary>
+    /// Estimated cost or predefined budget for the repair order
+    /// </summary>
+    public decimal EstimatedCost { get; set; } = 0;
+
     [MaxLength(500)]
     public string? Notes { get; set; }
 
@@ -38,10 +43,14 @@ public class RepairOrder
     public decimal TotalServicesAmount => RepairOrderServices?.Sum(s => s.Price) ?? 0;
     public decimal TotalPartsAmount => RepairOrderParts?.Sum(p => p.TotalPrice) ?? 0;
     public decimal SubTotal => TotalServicesAmount + TotalPartsAmount;
-    public decimal DiscountAmount => SubTotal * (DiscountPercentage / 100);
-    public decimal TotalAmount => SubTotal - DiscountAmount;
+    public decimal DiscountAmount => SubTotal > 0
+        ? SubTotal * (DiscountPercentage / 100m)
+        : EstimatedCost * (DiscountPercentage / 100m);
+    public decimal TotalAmount => SubTotal > 0
+        ? (SubTotal - DiscountAmount)
+        : (EstimatedCost - DiscountAmount);
     public decimal PaidAmount => Payments?.Sum(p => p.Amount) ?? 0;
-    public decimal RemainingAmount => TotalAmount - PaidAmount;
+    public decimal RemainingAmount => Math.Max(0, TotalAmount - PaidAmount);
     public bool IsFullyPaid => RemainingAmount <= 0;
 
     // Navigation
