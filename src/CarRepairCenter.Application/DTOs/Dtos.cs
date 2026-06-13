@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace CarRepairCenter.API.DTOs;
+namespace CarRepairCenter.Application.DTOs;
 
 // ── Auth ──
 public record LoginDto([Required] string Email, [Required] string Password);

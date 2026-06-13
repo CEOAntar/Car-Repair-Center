@@ -1292,6 +1292,19 @@
           "buildTransitive/net6.0/_._": {}
         }
       },
+      "CarRepairCenter.Application/1.0.0": {
+        "type": "project",
+        "framework": ".NETCoreApp,Version=v9.0",
+        "dependencies": {
+          "CarRepairCenter.Core": "1.0.0"
+        },
+        "compile": {
+          "bin/placeholder/CarRepairCenter.Application.dll": {}
+        },
+        "runtime": {
+          "bin/placeholder/CarRepairCenter.Application.dll": {}
+        }
+      },
       "CarRepairCenter.Core/1.0.0": {
         "type": "project",
         "framework": ".NETCoreApp,Version=v9.0",
@@ -1306,7 +1319,9 @@
         "type": "project",
         "framework": ".NETCoreApp,Version=v9.0",
         "dependencies": {
+          "CarRepairCenter.Application": "1.0.0",
           "CarRepairCenter.Core": "1.0.0",
+          "Microsoft.AspNetCore.Authentication.JwtBearer": "9.0.15",
           "Microsoft.AspNetCore.Identity.EntityFrameworkCore": "9.0.15",
           "Microsoft.EntityFrameworkCore.Sqlite": "9.0.15"
         },
@@ -3576,6 +3591,11 @@
         "useSharedDesignerContext.txt"
       ]
     },
+    "CarRepairCenter.Application/1.0.0": {
+      "type": "project",
+      "path": "../CarRepairCenter.Application/CarRepairCenter.Application.csproj",
+      "msbuildProject": "../CarRepairCenter.Application/CarRepairCenter.Application.csproj"
+    },
     "CarRepairCenter.Core/1.0.0": {
       "type": "project",
       "path": "../CarRepairCenter.Core/CarRepairCenter.Core.csproj",
@@ -3589,6 +3609,7 @@
   },
   "projectFileDependencyGroups": {
     "net9.0": [
+      "CarRepairCenter.Application >= 1.0.0",
       "CarRepairCenter.Core >= 1.0.0",
       "CarRepairCenter.Infrastructure >= 1.0.0",
       "Microsoft.AspNetCore.Authentication.JwtBearer >= 9.0.15",
@@ -3627,6 +3648,9 @@
         "net9.0": {
           "targetAlias": "net9.0",
           "projectReferences": {
+            "D:\\Asynex\\Car-Repair-Center\\src\\CarRepairCenter.Application\\CarRepairCenter.Application.csproj": {
+              "projectPath": "D:\\Asynex\\Car-Repair-Center\\src\\CarRepairCenter.Application\\CarRepairCenter.Application.csproj"
+            },
             "D:\\Asynex\\Car-Repair-Center\\src\\CarRepairCenter.Core\\CarRepairCenter.Core.csproj": {
               "projectPath": "D:\\Asynex\\Car-Repair-Center\\src\\CarRepairCenter.Core\\CarRepairCenter.Core.csproj"
             },

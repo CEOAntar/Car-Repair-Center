@@ -163,3 +163,5 @@ D:\Asynex\Car-Repair-Center\src\CarRepairCenter.API\obj\Debug\net9.0\refint\CarR
 D:\Asynex\Car-Repair-Center\src\CarRepairCenter.API\obj\Debug\net9.0\CarRepairCenter.API.pdb
 D:\Asynex\Car-Repair-Center\src\CarRepairCenter.API\obj\Debug\net9.0\CarRepairCenter.API.genruntimeconfig.cache
 D:\Asynex\Car-Repair-Center\src\CarRepairCenter.API\obj\Debug\net9.0\ref\CarRepairCenter.API.dll
+D:\Asynex\Car-Repair-Center\src\CarRepairCenter.API\bin\Debug\net9.0\CarRepairCenter.Application.dll
+D:\Asynex\Car-Repair-Center\src\CarRepairCenter.API\bin\Debug\net9.0\CarRepairCenter.Application.pdb

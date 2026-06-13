@@ -8,3 +8,5 @@ D:\Asynex\Car-Repair-Center\src\CarRepairCenter.Core\obj\Debug\net9.0\CarRepairC
 D:\Asynex\Car-Repair-Center\src\CarRepairCenter.Core\obj\Debug\net9.0\CarRepairCenter.Core.dll
 D:\Asynex\Car-Repair-Center\src\CarRepairCenter.Core\obj\Debug\net9.0\refint\CarRepairCenter.Core.dll
 D:\Asynex\Car-Repair-Center\src\CarRepairCenter.Core\obj\Debug\net9.0\CarRepairCenter.Core.pdb
+D:\Asynex\Car-Repair-Center\src\CarRepairCenter.Core\bin\Debug\net9.0\CarRepairCenter.Core.dll
+D:\Asynex\Car-Repair-Center\src\CarRepairCenter.Core\obj\Debug\net9.0\ref\CarRepairCenter.Core.dll

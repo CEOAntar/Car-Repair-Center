@@ -6,6 +6,10 @@ using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using CarRepairCenter.Infrastructure.Data;
+using CarRepairCenter.Application.Interfaces;
+using CarRepairCenter.Application.Services;
+using CarRepairCenter.Infrastructure.Repositories;
+using CarRepairCenter.Infrastructure.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,7 +31,20 @@ builder.Services.AddIdentityCore<AppUser>(options =>
     .AddDefaultTokenProviders();
 
 // ── JWT Authentication ──
-var jwtKey = builder.Configuration["Jwt:Key"] ?? "MakanakServiceSuperSecretKey2026!@#$%^&*()";
+var jwtKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY") 
+    ?? builder.Configuration["Jwt:Key"];
+
+if (string.IsNullOrWhiteSpace(jwtKey))
+{
+    throw new InvalidOperationException(
+        "JWT key not configured. Set JWT_SECRET_KEY environment variable or Jwt:Key in appsettings.");
+}
+
+if (jwtKey.Length < 32)
+{
+    throw new InvalidOperationException("JWT Key must be at least 32 characters (256 bits) long.");
+}
+
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "MakanakService";
 
 builder.Services.AddAuthentication(options =>
@@ -45,11 +62,32 @@ builder.Services.AddAuthentication(options =>
             ValidateIssuerSigningKey = true,
             ValidIssuer = jwtIssuer,
             ValidAudience = jwtIssuer,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+            ClockSkew = TimeSpan.Zero
         };
     });
 
 builder.Services.AddAuthorization();
+
+// ── Repositories ──
+builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
+builder.Services.AddScoped<IVehicleRepository, VehicleRepository>();
+builder.Services.AddScoped<IInventoryRepository, InventoryRepository>();
+builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
+builder.Services.AddScoped<IServiceRepository, ServiceRepository>();
+builder.Services.AddScoped<IRepairOrderRepository, RepairOrderRepository>();
+builder.Services.AddScoped<IDashboardRepository, DashboardRepository>();
+
+// ── Application Services ──
+builder.Services.AddScoped<ICustomerService, CustomerService>();
+builder.Services.AddScoped<IDashboardService, DashboardService>();
+builder.Services.AddScoped<IInventoryService, InventoryService>();
+builder.Services.AddScoped<IPaymentService, PaymentService>();
+builder.Services.AddScoped<IServiceCatalogService, ServiceCatalogService>();
+builder.Services.AddScoped<IVehicleService, VehicleService>();
+builder.Services.AddScoped<IRepairOrderService, RepairOrderService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
+
 
 // ── CORS ──
 builder.Services.AddCors(options =>

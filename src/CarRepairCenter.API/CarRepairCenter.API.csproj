@@ -3,6 +3,7 @@
   <ItemGroup>
     <ProjectReference Include="..\CarRepairCenter.Core\CarRepairCenter.Core.csproj" />
     <ProjectReference Include="..\CarRepairCenter.Infrastructure\CarRepairCenter.Infrastructure.csproj" />
+    <ProjectReference Include="..\CarRepairCenter.Application\CarRepairCenter.Application.csproj" />
   </ItemGroup>
 
   <ItemGroup>

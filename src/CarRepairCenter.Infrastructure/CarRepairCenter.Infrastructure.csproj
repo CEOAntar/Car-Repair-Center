@@ -2,9 +2,11 @@
 
   <ItemGroup>
     <ProjectReference Include="..\CarRepairCenter.Core\CarRepairCenter.Core.csproj" />
+    <ProjectReference Include="..\CarRepairCenter.Application\CarRepairCenter.Application.csproj" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.15" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="9.0.15" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.15">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

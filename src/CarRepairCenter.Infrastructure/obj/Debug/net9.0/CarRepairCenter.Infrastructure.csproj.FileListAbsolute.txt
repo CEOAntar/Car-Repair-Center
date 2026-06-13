@@ -16,3 +16,5 @@ D:\Asynex\Car-Repair-Center\src\CarRepairCenter.Infrastructure\obj\Debug\net9.0\
 D:\Asynex\Car-Repair-Center\src\CarRepairCenter.Infrastructure\obj\Debug\net9.0\CarRepairCenter.Infrastructure.pdb
 D:\Asynex\Car-Repair-Center\src\CarRepairCenter.Infrastructure\obj\Debug\net9.0\CarRepairCenter.Infrastructure.genruntimeconfig.cache
 D:\Asynex\Car-Repair-Center\src\CarRepairCenter.Infrastructure\obj\Debug\net9.0\ref\CarRepairCenter.Infrastructure.dll
+D:\Asynex\Car-Repair-Center\src\CarRepairCenter.Infrastructure\bin\Debug\net9.0\CarRepairCenter.Application.dll
+D:\Asynex\Car-Repair-Center\src\CarRepairCenter.Infrastructure\bin\Debug\net9.0\CarRepairCenter.Application.pdb

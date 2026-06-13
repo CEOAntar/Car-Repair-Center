@@ -1,0 +1,16 @@
+D:\Asynex\Car-Repair-Center\src\CarRepairCenter.Application\bin\Debug\net9.0\CarRepairCenter.Application.deps.json
+D:\Asynex\Car-Repair-Center\src\CarRepairCenter.Application\bin\Debug\net9.0\CarRepairCenter.Application.dll
+D:\Asynex\Car-Repair-Center\src\CarRepairCenter.Application\bin\Debug\net9.0\CarRepairCenter.Application.pdb
+D:\Asynex\Car-Repair-Center\src\CarRepairCenter.Application\bin\Debug\net9.0\CarRepairCenter.Core.dll
+D:\Asynex\Car-Repair-Center\src\CarRepairCenter.Application\bin\Debug\net9.0\CarRepairCenter.Core.pdb
+D:\Asynex\Car-Repair-Center\src\CarRepairCenter.Application\obj\Debug\net9.0\CarRepairCenter.Application.csproj.AssemblyReference.cache
+D:\Asynex\Car-Repair-Center\src\CarRepairCenter.Application\obj\Debug\net9.0\CarRepairCenter.Application.GeneratedMSBuildEditorConfig.editorconfig
+D:\Asynex\Car-Repair-Center\src\CarRepairCenter.Application\obj\Debug\net9.0\CarRepairCenter.Application.AssemblyInfoInputs.cache
+D:\Asynex\Car-Repair-Center\src\CarRepairCenter.Application\obj\Debug\net9.0\CarRepairCenter.Application.AssemblyInfo.cs
+D:\Asynex\Car-Repair-Center\src\CarRepairCenter.Application\obj\Debug\net9.0\CarRepairCenter.Application.csproj.CoreCompileInputs.cache
+D:\Asynex\Car-Repair-Center\src\CarRepairCenter.Application\obj\Debug\net9.0\CarRepairCenter.Application.sourcelink.json
+D:\Asynex\Car-Repair-Center\src\CarRepairCenter.Application\obj\Debug\net9.0\CarRepai.EE37B401.Up2Date
+D:\Asynex\Car-Repair-Center\src\CarRepairCenter.Application\obj\Debug\net9.0\CarRepairCenter.Application.dll
+D:\Asynex\Car-Repair-Center\src\CarRepairCenter.Application\obj\Debug\net9.0\refint\CarRepairCenter.Application.dll
+D:\Asynex\Car-Repair-Center\src\CarRepairCenter.Application\obj\Debug\net9.0\CarRepairCenter.Application.pdb
+D:\Asynex\Car-Repair-Center\src\CarRepairCenter.Application\obj\Debug\net9.0\ref\CarRepairCenter.Application.dll
